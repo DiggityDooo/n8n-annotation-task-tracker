@@ -1,7 +1,6 @@
 name: AI Agent Workspace Editor
 
 on:
-  # Allows you to trigger this agent manually from the GitHub Actions tab
   workflow_dispatch:
     inputs:
       prompt:
@@ -9,52 +8,43 @@ on:
         required: true
         type: string
 
-# CRITICAL: These permissions are required for the agent to modify the workspace
 permissions:
   contents: write
   pull-requests: write
-  issues: write
 
 jobs:
   run-agent:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Check out the repository so the agent has access to the workspace
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Fetch full history so the agent understands the repository context
-          fetch-depth: 0 
+          fetch-depth: 0
 
-      # 2. Execute the agent script
       - name: Run AI Agent
         env:
-          # Pass required authentication to the agent
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # If your agent needs OpenAI, ensure the secret is set in repository settings
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} 
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          echo "Starting the agent..."
+          set -e  # Exit immediately if any command fails
+          echo "Starting the agent with prompt: ${{ github.event.inputs.prompt }}"
           
-          # ⚠️ REPLACE this line with the command that actually runs your specific agent
-          # Example: python agent.py --model "gpt-4o" --prompt "${{ github.event.inputs.prompt }}"
-          # Example: npx copilot-cli run --task "n8n-annotation"
-          
-      # 3. Detect changes, commit, and push them back to the repository
-      - name: Commit and push agent changes
-        run: |
-          # Set up the bot identity for the commit history
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Stage all modified code and newly generated files (like images)
-          git add .
-          
-          # Check if the agent actually made any changes before trying to commit
-          if ! git diff-index --quiet HEAD; then
-            git commit -m "Automated changes made by AI Agent"
-            git push
-          else
-            echo "The agent finished, but no changes were made to the workspace."
-          fi
+          # Replace with your actual agent command
+          # python agent.py --model "gpt-4o" --prompt "${{ github.event.inputs.prompt }}"
+          # or
+          # npx copilot-cli run --task "n8n-annotation" --prompt "${{ github.event.inputs.prompt }}"
+
+      - name: Create Pull Request with changes
+        if: success()  # Only run if agent succeeds
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: "Automated changes made by AI Agent: ${{ github.event.inputs.prompt }}"
+          title: "AI Agent: ${{ github.event.inputs.prompt }}"
+          body: |
+            Automated workflow triggered with prompt:
+            ```
+            ${{ github.event.inputs.prompt }}
+            ```
+          branch: ai-agent-${{ github.run_id }}
+          delete-branch: true
