@@ -1,0 +1,336 @@
+{
+  "name": "AI Annotation Task Tracker & Notifier",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-1",
+      "name": "Every 30 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1200,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 25,
+        "simple": false,
+        "filters": {
+          "q": "newer_than:1h (from:afterquery.com OR from:handshake.com OR from:scale.com OR from:outlier.ai OR from:terac OR from:turing.com OR from:pasiflora OR from:braintrust OR from:hume.ai OR from:labelbox.com OR from:surge.ai OR from:dataannotation.com OR from:rationale OR from:anthropic.com OR from:openai.com OR from:micro1 OR from:astoria.ai OR from:fleet.ai OR from:remotasks.com OR from:appen.com OR subject:(task OR assignment OR annotation OR HIT OR evaluation OR assessment))"
+        },
+        "options": {}
+      },
+      "id": "gmail-search-1",
+      "name": "Search Gmail For New Tasks",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -960,
+        128
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse each Gmail message into a structured task record\nconst items = $input.all();\nconst platformMap = [\n  { match: /afterquery/i, name: 'AfterQuery' },\n  { match: /handshake/i, name: 'Handshake AI' },\n  { match: /scale\\.?ai|scale\\.com/i, name: 'Scale AI' },\n  { match: /outlier/i, name: 'Outlier AI' },\n  { match: /terac/i, name: 'Terac' },\n  { match: /turing\\.com|turing\\.ai/i, name: 'Turing' },\n  { match: /pasiflora/i, name: 'Pasiflora' },\n  { match: /braintrust/i, name: 'Braintrust' },\n  { match: /hume\\.ai|hume\\.com/i, name: 'Hume AI' },\n  { match: /labelbox/i, name: 'Labelbox' },\n  { match: /surge\\.ai|surge\\.ai/i, name: 'Surge AI' },\n  { match: /data.?annotation|dataannotation/i, name: 'DataAnnotation'},\n  { match: /rationale/i, name: 'Rationale' },\n  { match: /anthropic/i, name: 'Anthropic' },\n  { match: /openai/i, name: 'OpenAI' },\n  { match: /micro1/i, name: 'Micro1' },\n  { match: /astoria\\.ai|astoria/i, name: 'Astoria AI' },\n  { match: /fleet\\.ai|fleet/i, name: 'Fleet AI' },\n  { match: /remotasks/i, name: 'Remotasks' },\n  { match: /claude/i, name: 'claude' },\n  { match: /appen/i, name: 'Appen' }\n];\n\nconst urgentKeywords = /urgent|deadline|expir|due (today|soon)|closing soon|last chance|job offer|interview|assessment|payment|money/i;\n\nreturn items.map(item => {\n  const json = item.json;\n  const from = (json.from?.value?.[0]?.address || json.from?.text || '').toString();\n  const subject = json.subject || '(no subject)';\n  const snippet = json.snippet || '';\n  const receivedAt = json.date || new Date().toISOString();\n\n  let platform = 'Unknown';\n  for (const p of platformMap) {\n    if (p.match.test(from) || p.match.test(subject)) {\n      platform = p.name;\n      break;\n    }\n  }\n\n  const isUrgent = urgentKeywords.test(subject) || urgentKeywords.test(snippet);\n\n  return {\n    json: {\n      platform,\n      subject,\n      snippet,\n      from,\n      receivedAt,\n      isUrgent,\n      messageId: json.id || ''\n    }\n  };\n});"
+      },
+      "id": "code-parse-1",
+      "name": "Parse Task Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tracker",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Platform": "={{ $json.platform }}",
+            "Subject": "={{ $json.subject }}",
+            "Snippet": "={{ $json.snippet }}",
+            "Received At": "={{ $json.receivedAt }}",
+            "Urgent": "={{ $json.isUrgent }}",
+            "Status": "New"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Snippet",
+              "displayName": "Snippet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Received At",
+              "displayName": "Received At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Urgent",
+              "displayName": "Urgent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "sheets-append-1",
+      "name": "Log Task To Tracker Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -480,
+        128
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "urgent-check-1",
+              "leftValue": "={{ $json.isUrgent }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-urgent-1",
+      "name": "Is Urgent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -240,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "aggregate-1",
+      "name": "Aggregate New Tasks",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@gmail.com",
+        "subject": "={{ $now.format('MM/dd HH:mm') }} — New Annotation Tasks Found",
+        "message": "=<h3>New annotation tasks found this run</h3>\n<p>{{ $json.data.length }} new task(s) detected across your platforms.</p>\n<ul>\n{{ $json.data.map(t => `<li><b>${t.json.platform}</b>: ${t.json.subject}${t.json.isUrgent ? ' <span style=\"color:red;\">(URGENT)</span>' : ''}</li>`).join('') }}\n</ul>\n<p>Full log in your tracker sheet.</p>",
+        "options": {}
+      },
+      "id": "gmail-send-1",
+      "name": "Send Summary Notification",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        176
+      ],
+      "id": "noop-1",
+      "name": "No Operation, do nothing"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Search Gmail For New Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Gmail For New Tasks": {
+      "main": [
+        [
+          {
+            "node": "Parse Task Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Task Emails": {
+      "main": [
+        [
+          {
+            "node": "Log Task To Tracker Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Task To Tracker Sheet": {
+      "main": [
+        [
+          {
+            "node": "Is Urgent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Urgent?": {
+      "main": [
+        [
+          {
+            "node": "Aggregate New Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate New Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate New Tasks": {
+      "main": [
+        [
+          {
+            "node": "Send Summary Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": ["annotation", "task-tracker", "automation", "gmail", "sheets"]
+}
