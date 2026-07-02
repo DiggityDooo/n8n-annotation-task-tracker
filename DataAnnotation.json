@@ -1,0 +1,71 @@
+{
+  "name": "n8n-annotation-task-tracker",
+  "nodes": [
+    {
+      "name": "Every 30 Minutes",
+      "type": "n8n-nodes-base.cron",
+      "position": [260, 320]
+    },
+    {
+      "name": "Search Gmail For New Tasks",
+      "type": "n8n-nodes-base.gmail",
+      "position": [500, 320]
+    },
+    {
+      "name": "Parse Task Emails",
+      "type": "n8n-nodes-base.code",
+      "position": [740, 320]
+    },
+    {
+      "name": "Log Task To Tracker Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [980, 320]
+    },
+    {
+      "name": "Is Urgent?",
+      "type": "n8n-nodes-base.if",
+      "position": [1220, 320]
+    },
+    {
+      "name": "Aggregate New Tasks",
+      "type": "n8n-nodes-base.aggregate",
+      "position": [1460, 260]
+    },
+    {
+      "name": "Send Summary Notification",
+      "type": "n8n-nodes-base.gmail",
+      "position": [1700, 260]
+    },
+    {
+      "name": "No Operation, do nothing",
+      "type": "n8n-nodes-base.noOp",
+      "position": [1460, 400]
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [[{"node": "Search Gmail For New Tasks", "type": "main", "index": 0}]]
+    },
+    "Search Gmail For New Tasks": {
+      "main": [[{"node": "Parse Task Emails", "type": "main", "index": 0}]]
+    },
+    "Parse Task Emails": {
+      "main": [[{"node": "Log Task To Tracker Sheet", "type": "main", "index": 0}]]
+    },
+    "Log Task To Tracker Sheet": {
+      "main": [[{"node": "Is Urgent?", "type": "main", "index": 0}]]
+    },
+    "Is Urgent?": {
+      "main": [
+        [{"node": "Aggregate New Tasks", "type": "main", "index": 0}],
+        [{"node": "No Operation, do nothing", "type": "main", "index": 0}]
+      ]
+    },
+    "Aggregate New Tasks": {
+      "main": [[{"node": "Send Summary Notification", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "placeholder-version"
+}
