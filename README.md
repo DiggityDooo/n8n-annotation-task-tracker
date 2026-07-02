@@ -38,7 +38,7 @@ No manual work. No missed opportunities.
 ## Quick Start
 
 ### Prerequisites
-- n8n running locally (`http://localhost:5678`)
+- n8n running locally (`http://localhost:`)
 - Google account (personal or Workspace)
 - 5 minutes to set up OAuth
 
@@ -56,7 +56,7 @@ Follow [docs/setup-guide.md](docs/setup-guide.md) for detailed instructions, or:
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)
 2. Create a new project → enable **Gmail API** + **Google Sheets API**
 3. **APIs & Services → Credentials → Create OAuth2 Client ID (Web application)**
-4. Add redirect URI: `http://localhost:5678/rest/oauth2-credential/callback`
+4. Add redirect URI: `http://localhost:    /rest/oauth2-credential/callback`
 5. Copy Client ID + Client Secret
 
 **Step 3: Connect Credentials in n8n**
